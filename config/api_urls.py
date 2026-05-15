@@ -2,7 +2,7 @@ from django.urls import path
 from apps.authentication.views import LoginView, RegisterView, RefreshView
 from apps.transactions.views import TransactionListCreateView
 from apps.credit_scoring.views import CreditScoreAnalyzeView
-from apps.fraud_detection.views import FraudAnalyzeView
+from apps.fraud_detection.views import FraudAlertListView, FraudAnalyzeView
 from apps.ai_insights.views import AIInsightsView
 from apps.analytics.views import DashboardView
 from apps.users.views import UserRiskProfileView
@@ -19,6 +19,7 @@ urlpatterns = [
     # AI Features
     path('credit-score/analyze/', CreditScoreAnalyzeView.as_view(), name='credit-score'),
     path('fraud/analyze/', FraudAnalyzeView.as_view(), name='fraud-analyze'),
+    path('fraud/alerts/', FraudAlertListView.as_view(), name='fraud-alerts'),
     path('ai/insights/', AIInsightsView.as_view(), name='ai-insights'),
 
     # Analytics

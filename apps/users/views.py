@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .models import User
+from .permissions import can_access_user
 from apps.credit_scoring.models import RiskProfile
 from apps.credit_scoring.serializers import RiskProfileSerializer
 from apps.transactions.models import Transaction
@@ -14,6 +15,12 @@ class UserRiskProfileView(APIView):
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not can_access_user(request.user, user):
+            return Response(
+                {'error': 'You do not have permission to access this user profile'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         risk_profile = RiskProfile.objects.filter(user=user).order_by('-created_at').first()
         transactions = Transaction.objects.filter(user=user).order_by('-timestamp')[:20]
