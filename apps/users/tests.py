@@ -213,3 +213,38 @@ class TenantIsolationTests(TestCase):
         self.assertEqual(data['failed'], 1)
         self.assertEqual(data['results'][0]['status'], 'success')
         self.assertEqual(data['results'][1]['status'], 'failed')
+
+    def test_transaction_batch_import_preserves_historical_timestamp(self):
+        self.authenticate(self.analyst)
+
+        response = self.client.post(
+            '/api/v1/transactions/batch/',
+            {
+                'entries': [
+                    {
+                        'amount': '45000.00',
+                        'type': 'debit',
+                        'payment_method': 'mobile_money',
+                        'location': 'Yaounde',
+                        'timestamp': '2026-05-15T09:30:00Z',
+                        'device_change': False,
+                    },
+                ],
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data['succeeded'], 1)
+        imported = Transaction.objects.get(id=data['results'][0]['result']['id'])
+        self.assertEqual(imported.user, self.analyst)
+        self.assertEqual(imported.timestamp.year, 2026)
+
+    def test_dataset_template_download(self):
+        self.authenticate(self.analyst)
+
+        response = self.client.get('/api/v1/datasets/templates/transactions/csv/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('amount,type,payment_method', response.content.decode())

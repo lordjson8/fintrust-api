@@ -1,7 +1,9 @@
 from rest_framework.generics import ListCreateAPIView
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from .models import Transaction
 from .serializers import TransactionSerializer
+from apps.ai_insights.datasets import load_dataset_entries
 from apps.fraud_detection.models import FraudAlert
 from apps.users.permissions import is_admin_user
 
@@ -45,3 +47,46 @@ class TransactionListCreateView(ListCreateAPIView):
             } if alert else None
 
         return Response(data)
+
+
+class TransactionBatchCreateView(APIView):
+    def post(self, request):
+        entries = load_dataset_entries(request)
+        results = []
+        success_count = 0
+
+        for index, entry in enumerate(entries, start=1):
+            data = dict(entry)
+            if 'user_id' in data and 'user' not in data:
+                data['user'] = data.pop('user_id')
+
+            serializer = TransactionSerializer(data=data)
+            if not serializer.is_valid():
+                results.append({
+                    'row': index,
+                    'status': 'failed',
+                    'errors': serializer.errors,
+                })
+                continue
+
+            requested_user = serializer.validated_data.get('user')
+            save_kwargs = {}
+            if is_admin_user(request.user) and requested_user:
+                save_kwargs['user'] = requested_user
+            else:
+                save_kwargs['user'] = request.user
+
+            transaction = serializer.save(**save_kwargs)
+            success_count += 1
+            results.append({
+                'row': index,
+                'status': 'success',
+                'result': TransactionSerializer(transaction).data,
+            })
+
+        return Response({
+            'total': len(entries),
+            'succeeded': success_count,
+            'failed': len(entries) - success_count,
+            'results': results,
+        })

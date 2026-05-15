@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.utils import timezone
 from apps.users.models import User
 
 
@@ -21,7 +22,7 @@ class Transaction(models.Model):
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     payment_method = models.CharField(max_length=30, choices=PAYMENT_METHOD_CHOICES, default='mobile_money')
     location = models.CharField(max_length=100, default='Yaoundé')
-    timestamp = models.DateTimeField(auto_now_add=True)
+    timestamp = models.DateTimeField(default=timezone.now)
     device_change = models.BooleanField(default=False)
 
     class Meta:

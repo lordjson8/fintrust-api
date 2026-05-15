@@ -1,9 +1,10 @@
 from django.urls import path
 from apps.authentication.views import LoginView, RegisterView, RefreshView
-from apps.transactions.views import TransactionListCreateView
+from apps.transactions.views import TransactionBatchCreateView, TransactionListCreateView
 from apps.credit_scoring.views import CreditScoreAnalyzeView, CreditScoreBatchAnalyzeView
 from apps.fraud_detection.views import FraudAlertListView, FraudAnalyzeView, FraudBatchAnalyzeView
 from apps.ai_insights.views import AIInsightsView
+from apps.ai_insights.templates import DatasetTemplateDownloadView
 from apps.analytics.views import DashboardView
 from apps.users.views import UserRiskProfileView
 
@@ -15,6 +16,14 @@ urlpatterns = [
 
     # Transactions
     path('transactions/', TransactionListCreateView.as_view(), name='transactions'),
+    path('transactions/batch/', TransactionBatchCreateView.as_view(), name='transactions-batch'),
+
+    # Dataset templates
+    path(
+        'datasets/templates/<str:template_type>/<str:file_format>/',
+        DatasetTemplateDownloadView.as_view(),
+        name='dataset-template',
+    ),
 
     # AI Features
     path('credit-score/analyze/', CreditScoreAnalyzeView.as_view(), name='credit-score'),

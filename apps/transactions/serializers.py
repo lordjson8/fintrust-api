@@ -11,5 +11,5 @@ class TransactionSerializer(serializers.ModelSerializer):
             'id', 'user', 'user_name', 'amount', 'type',
             'payment_method', 'location', 'timestamp', 'device_change'
         ]
-        read_only_fields = ['id', 'timestamp']
+        read_only_fields = ['id']
         extra_kwargs = {'user': {'required': False}}
