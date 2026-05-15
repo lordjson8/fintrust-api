@@ -1,0 +1,29 @@
+from django.urls import path
+from apps.authentication.views import LoginView, RegisterView, RefreshView
+from apps.transactions.views import TransactionListCreateView
+from apps.credit_scoring.views import CreditScoreAnalyzeView
+from apps.fraud_detection.views import FraudAnalyzeView
+from apps.ai_insights.views import AIInsightsView
+from apps.analytics.views import DashboardView
+from apps.users.views import UserRiskProfileView
+
+urlpatterns = [
+    # Auth
+    path('auth/login/', LoginView.as_view(), name='login'),
+    path('auth/register/', RegisterView.as_view(), name='register'),
+    path('auth/refresh/', RefreshView.as_view(), name='refresh'),
+
+    # Transactions
+    path('transactions/', TransactionListCreateView.as_view(), name='transactions'),
+
+    # AI Features
+    path('credit-score/analyze/', CreditScoreAnalyzeView.as_view(), name='credit-score'),
+    path('fraud/analyze/', FraudAnalyzeView.as_view(), name='fraud-analyze'),
+    path('ai/insights/', AIInsightsView.as_view(), name='ai-insights'),
+
+    # Analytics
+    path('analytics/dashboard/', DashboardView.as_view(), name='dashboard'),
+
+    # Users
+    path('users/<uuid:user_id>/risk-profile/', UserRiskProfileView.as_view(), name='risk-profile'),
+]
