@@ -8,6 +8,17 @@ from apps.users.permissions import is_admin_user
 from django.db.models import Avg, Count, Sum
 
 
+def _label_value(rows, label_key, value_key='count'):
+    return [
+        {
+            **row,
+            'label': row.get(label_key) or 'Unknown',
+            'value': row.get(value_key) or 0,
+        }
+        for row in rows
+    ]
+
+
 class DashboardView(APIView):
     def get(self, request):
         admin_view = is_admin_user(request.user)
@@ -37,6 +48,7 @@ class DashboardView(APIView):
             .annotate(count=Count('id'), total=Sum('amount'))
             .order_by('type')
         )
+        txn_by_type_chart = _label_value(txn_by_type, 'type')
 
         # Payment method breakdown
         txn_by_method = list(
@@ -44,6 +56,7 @@ class DashboardView(APIView):
             .annotate(count=Count('id'))
             .order_by('-count')
         )
+        txn_by_method_chart = _label_value(txn_by_method, 'payment_method')
 
         # Fraud urgency distribution
         fraud_by_urgency = list(
@@ -51,20 +64,23 @@ class DashboardView(APIView):
             .annotate(count=Count('id'))
             .order_by('urgency')
         )
+        fraud_by_urgency_chart = _label_value(fraud_by_urgency, 'urgency')
 
         # Risk score distribution (buckets)
         risk_distribution = [
-            {'label': 'High Risk (0-39)', 'count': risk_profiles.filter(risk_score__lt=40).count(), 'color': '#EF4444'},
-            {'label': 'Medium Risk (40-69)', 'count': risk_profiles.filter(risk_score__gte=40, risk_score__lt=70).count(), 'color': '#F59E0B'},
-            {'label': 'Low Risk (70-100)', 'count': risk_profiles.filter(risk_score__gte=70).count(), 'color': '#22C55E'},
+            {'label': 'High Risk (0-39)', 'value': risk_profiles.filter(risk_score__lt=40).count(), 'color': '#EF4444'},
+            {'label': 'Medium Risk (40-69)', 'value': risk_profiles.filter(risk_score__gte=40, risk_score__lt=70).count(), 'color': '#F59E0B'},
+            {'label': 'Low Risk (70-100)', 'value': risk_profiles.filter(risk_score__gte=70).count(), 'color': '#22C55E'},
         ]
 
         # Recent transactions (last 10)
         recent_transactions = list(
             transactions.select_related('user')
-            .values('id', 'user__full_name', 'amount', 'type', 'payment_method', 'location', 'timestamp')
+            .values('id', 'user_id', 'user__full_name', 'amount', 'type', 'payment_method', 'location', 'timestamp')
             .order_by('-timestamp')[:10]
         )
+        for transaction in recent_transactions:
+            transaction['user_name'] = transaction['user__full_name']
 
         # Recent fraud alerts (last 5)
         recent_alerts = list(
@@ -74,6 +90,10 @@ class DashboardView(APIView):
             )
             .order_by('-created_at')[:5]
         )
+        for alert in recent_alerts:
+            alert['user_name'] = alert['transaction__user__full_name']
+            alert['transaction_amount'] = alert['transaction__amount']
+            alert['transaction_location'] = alert['transaction__location']
 
         return Response({
             'kpis': {
@@ -85,11 +105,15 @@ class DashboardView(APIView):
                 'low_risk_customers': low_risk_customers,
             },
             'charts': {
-                'transaction_by_type': txn_by_type,
-                'transaction_by_method': txn_by_method,
-                'fraud_by_urgency': fraud_by_urgency,
+                'transaction_by_type': txn_by_type_chart,
+                'transaction_by_method': txn_by_method_chart,
+                'fraud_by_urgency': fraud_by_urgency_chart,
                 'risk_distribution': risk_distribution,
             },
+            'transaction_by_type': txn_by_type_chart,
+            'transaction_by_method': txn_by_method_chart,
+            'fraud_by_urgency': fraud_by_urgency_chart,
+            'risk_distribution': risk_distribution,
             'recent_transactions': recent_transactions,
             'recent_alerts': recent_alerts,
         })

@@ -149,3 +149,67 @@ class TenantIsolationTests(TestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_credit_batch_scores_valid_rows_and_reports_invalid_rows(self):
+        self.authenticate(self.analyst)
+
+        response = self.client.post(
+            '/api/v1/credit-score/analyze/batch/',
+            {
+                'entries': [
+                    {
+                        'monthly_income': 100000,
+                        'mobile_money_frequency': 12,
+                        'late_payments': 1,
+                        'account_age_months': 9,
+                    },
+                    {
+                        'monthly_income': -1,
+                        'mobile_money_frequency': 12,
+                        'late_payments': 1,
+                        'account_age_months': 9,
+                    },
+                ],
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data['total'], 2)
+        self.assertEqual(data['succeeded'], 1)
+        self.assertEqual(data['failed'], 1)
+        self.assertEqual(data['results'][0]['status'], 'success')
+        self.assertEqual(data['results'][0]['result']['user_id'], str(self.analyst.id))
+        self.assertEqual(data['results'][1]['status'], 'failed')
+
+    def test_fraud_batch_preserves_transaction_access_rules(self):
+        self.authenticate(self.analyst)
+
+        response = self.client.post(
+            '/api/v1/fraud/analyze/batch/',
+            {
+                'entries': [
+                    {
+                        'transaction_id': str(self.analyst_txn.id),
+                        'amount': '1000.00',
+                        'location': 'Yaounde',
+                        'device_change': False,
+                    },
+                    {
+                        'transaction_id': str(self.other_txn.id),
+                        'amount': '2000.00',
+                        'location': 'Douala',
+                        'device_change': True,
+                    },
+                ],
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data['succeeded'], 1)
+        self.assertEqual(data['failed'], 1)
+        self.assertEqual(data['results'][0]['status'], 'success')
+        self.assertEqual(data['results'][1]['status'], 'failed')

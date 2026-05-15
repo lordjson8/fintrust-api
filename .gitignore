@@ -3,4 +3,5 @@
 __pycache__/
 db.sqlite3
 staticfiles/
+fintrust-insights/
 .DS_Store
