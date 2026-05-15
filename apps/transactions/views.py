@@ -58,7 +58,9 @@ class TransactionBatchCreateView(APIView):
         for index, entry in enumerate(entries, start=1):
             data = dict(entry)
             if 'user_id' in data and 'user' not in data:
-                data['user'] = data.pop('user_id')
+                # data['user'] = data.pop('user_id')
+                data['user'] = request.user.id  # Override to current user for security
+
 
             serializer = TransactionSerializer(data=data)
             if not serializer.is_valid():
