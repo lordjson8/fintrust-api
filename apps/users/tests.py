@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.test import TestCase
 from rest_framework import status
@@ -308,3 +309,27 @@ class TenantIsolationTests(TestCase):
         self.assertGreater(data['invalid_rows'], 0)
         self.assertIn('quality_score', data)
         self.assertIn('recommendations', data)
+
+    @patch('apps.ai_insights.services.groq_service.analyze_insights')
+    def test_ai_insights_normalizes_french_ai_keys(self, analyze_insights):
+        analyze_insights.return_value = {
+            'resume': "Aucune transaction n'a eu lieu.",
+            'recommandations': [
+                "Mettre en place des strategie d'acquisition de clients",
+                "Developper des produits de credit attractifs",
+            ],
+            'niveau_de_risque': 'FAIBLE',
+            'opportunites': [
+                'Developper les services bancaires mobiles',
+            ],
+        }
+        self.authenticate(self.analyst)
+
+        response = self.client.post('/api/v1/ai/insights/', {'language': 'fr'}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data['summary'], "Aucune transaction n'a eu lieu.")
+        self.assertEqual(data['recommendations'][0], "Mettre en place des strategie d'acquisition de clients")
+        self.assertEqual(data['risk_level'], 'FAIBLE')
+        self.assertEqual(data['opportunities'][0], 'Developper les services bancaires mobiles')

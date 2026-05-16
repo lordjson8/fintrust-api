@@ -80,6 +80,59 @@ def _call_groq(system_prompt: str, user_message: str, language: str = 'en') -> d
     return json.loads(text)
 
 
+def _first_present(data: dict, *keys, default=None):
+    for key in keys:
+        if key in data and data[key] is not None:
+            return data[key]
+    return default
+
+
+def _as_list(value):
+    if isinstance(value, list):
+        return value
+    if value in (None, ''):
+        return []
+    return [str(value)]
+
+
+def normalize_credit_result(result: dict) -> dict:
+    return {
+        'risk_score': int(_first_present(result, 'risk_score', 'score_de_risque', default=0) or 0),
+        'repayment_probability': float(
+            _first_present(result, 'repayment_probability', 'probabilite_de_remboursement', default=0.0) or 0.0
+        ),
+        'explanation': str(_first_present(result, 'explanation', 'explication', 'resume', default='') or ''),
+        'recommended_loan': int(_first_present(result, 'recommended_loan', 'pret_recommande', default=0) or 0),
+    }
+
+
+def normalize_fraud_result(result: dict) -> dict:
+    return {
+        'fraud_probability': int(
+            _first_present(result, 'fraud_probability', 'probabilite_de_fraude', default=0) or 0
+        ),
+        'urgency': str(_first_present(result, 'urgency', 'urgence', default='LOW') or 'LOW').upper(),
+        'indicators': _as_list(_first_present(result, 'indicators', 'indicateurs', default=[])),
+        'explanation': str(_first_present(result, 'explanation', 'explication', 'resume', default='') or ''),
+        'action': str(_first_present(result, 'action', default='ALLOW') or 'ALLOW').upper(),
+    }
+
+
+def normalize_insights_result(result: dict) -> dict:
+    return {
+        'summary': str(_first_present(result, 'summary', 'resume', 'résumé', default='') or ''),
+        'recommendations': _as_list(
+            _first_present(result, 'recommendations', 'recommandations', default=[])
+        ),
+        'risk_level': str(
+            _first_present(result, 'risk_level', 'niveau_de_risque', default='LOW') or 'LOW'
+        ).upper(),
+        'opportunities': _as_list(
+            _first_present(result, 'opportunities', 'opportunites', 'opportunités', default=[])
+        ),
+    }
+
+
 def analyze_credit(data: dict) -> dict:
     language = normalize_language(data.get('language'))
     prompt = (
@@ -119,7 +172,7 @@ def analyze_insights(data: dict) -> dict:
 
 def safe_analyze_credit(data: dict) -> dict:
     try:
-        return analyze_credit(data)
+        return normalize_credit_result(analyze_credit(data))
     except Exception as e:
         print(f'[Groq Credit Fallback] {e}')
         language = normalize_language(data.get('language'))
@@ -140,7 +193,7 @@ def safe_analyze_credit(data: dict) -> dict:
 
 def safe_analyze_fraud(data: dict) -> dict:
     try:
-        return analyze_fraud(data)
+        return normalize_fraud_result(analyze_fraud(data))
     except Exception as e:
         print(f'[Groq Fraud Fallback] {e}')
         language = normalize_language(data.get('language'))
@@ -172,7 +225,7 @@ def safe_analyze_fraud(data: dict) -> dict:
 
 def safe_analyze_insights(data: dict) -> dict:
     try:
-        return analyze_insights(data)
+        return normalize_insights_result(analyze_insights(data))
     except Exception as e:
         print(f'[Groq Insights Fallback] {e}')
         language = normalize_language(data.get('language'))
