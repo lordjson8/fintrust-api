@@ -5,6 +5,7 @@ from apps.credit_scoring.models import RiskProfile
 from apps.fraud_detection.models import FraudAlert
 from apps.users.models import User
 from apps.users.permissions import is_admin_user
+from apps.ai_insights.intelligence import build_portfolio_intelligence
 from django.db.models import Avg, Count, Sum
 
 
@@ -116,4 +117,10 @@ class DashboardView(APIView):
             'risk_distribution': risk_distribution,
             'recent_transactions': recent_transactions,
             'recent_alerts': recent_alerts,
+            'portfolio_intelligence': build_portfolio_intelligence(
+                transactions,
+                risk_profiles,
+                fraud_alerts,
+                request.query_params.get('language') or request.headers.get('Accept-Language', 'en'),
+            ),
         })

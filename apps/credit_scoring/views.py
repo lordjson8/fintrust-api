@@ -6,6 +6,7 @@ from .serializers import CreditScoreInputSerializer
 from .models import RiskProfile
 from apps.users.models import User
 from apps.ai_insights.datasets import load_dataset_entries
+from apps.ai_insights.intelligence import build_credit_explainability
 from apps.ai_insights.services.groq_service import safe_analyze_credit
 from apps.users.permissions import is_admin_user
 
@@ -38,6 +39,7 @@ def analyze_credit_entry(request_user, data):
 
     return {
         **ai_result,
+        'explainability': build_credit_explainability(data, ai_result),
         'risk_profile_id': str(risk_profile.id) if risk_profile else None,
         'user_id': str(target_user.id) if target_user else None,
     }

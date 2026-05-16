@@ -6,6 +6,7 @@ from .serializers import FraudAnalyzeInputSerializer, FraudAlertSerializer
 from .models import FraudAlert
 from apps.transactions.models import Transaction
 from apps.ai_insights.datasets import load_dataset_entries
+from apps.ai_insights.intelligence import build_fraud_explainability
 from apps.ai_insights.services.groq_service import safe_analyze_fraud
 from apps.users.permissions import is_admin_user
 
@@ -39,6 +40,7 @@ def analyze_fraud_entry(request_user, data):
 
     return {
         **ai_result,
+        'explainability': build_fraud_explainability(data, ai_result),
         'alert_id': str(fraud_alert.id) if fraud_alert else None,
         'transaction_id': str(transaction.id) if transaction else None,
     }

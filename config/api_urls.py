@@ -3,7 +3,7 @@ from apps.authentication.views import LoginView, RegisterView, RefreshView
 from apps.transactions.views import TransactionBatchCreateView, TransactionListCreateView
 from apps.credit_scoring.views import CreditScoreAnalyzeView, CreditScoreBatchAnalyzeView
 from apps.fraud_detection.views import FraudAlertListView, FraudAnalyzeView, FraudBatchAnalyzeView
-from apps.ai_insights.views import AIInsightsView
+from apps.ai_insights.views import AIInsightsView, DatasetQualityView
 from apps.ai_insights.templates import DatasetTemplateDownloadView
 from apps.analytics.views import DashboardView
 from apps.users.views import UserRiskProfileView
@@ -23,6 +23,11 @@ urlpatterns = [
         'datasets/templates/<str:template_type>/<str:file_format>/',
         DatasetTemplateDownloadView.as_view(),
         name='dataset-template',
+    ),
+    path(
+        'datasets/quality/<str:dataset_type>/',
+        DatasetQualityView.as_view(),
+        name='dataset-quality',
     ),
 
     # AI Features

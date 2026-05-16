@@ -274,6 +274,14 @@ Run AI credit risk analysis on a customer's financial profile.
   "repayment_probability": 0.87,
   "recommended_loan": 270000,
   "explanation": "Stable income with consistent mobile money activity. Low late payment history indicates reliable repayment behavior.",
+  "explainability": {
+    "risk_band": "low_risk",
+    "confidence": "high",
+    "positive_factors": ["Frequent mobile money activity provides strong behavioral history."],
+    "negative_factors": ["Recent late payments reduce repayment confidence."],
+    "next_action": "Eligible for standard approval with routine monitoring.",
+    "what_if": ["Reduce late payments to improve repayment probability."]
+  },
   "risk_profile_id": "abc-...",
   "user_id": "3fa85f64-..."
 }
@@ -284,7 +292,10 @@ Run AI credit risk analysis on a customer's financial profile.
 | `risk_score` | 0–100 | 0 = very high risk, 100 = very safe |
 | `repayment_probability` | 0.0–1.0 | Probability of on-time repayment |
 | `recommended_loan` | integer XAF | Suggested maximum loan amount |
+| `explainability` | object | Positive/negative factors, confidence, next action, and what-if guidance |
 | `risk_profile_id` | UUID or null | DB record ID if `user_id` was provided |
+
+Send `"language": "fr"` to receive AI and explainability text in French. English is the default.
 
 **Error `400`:** Validation errors for missing or invalid fields.
 
@@ -341,6 +352,12 @@ Analyze a transaction for fraud signals.
     "Device change detected",
     "Unusual transaction size"
   ],
+  "explainability": {
+    "confidence": "high",
+    "signals": ["Amount is at least five times the customer baseline."],
+    "next_action": "Block or hold the transaction and require enhanced verification.",
+    "monitoring_rule": "Escalate future transactions with device change or amount above 2x baseline."
+  },
   "alert_id": "uuid-or-null",
   "transaction_id": "uuid-or-null"
 }
@@ -352,6 +369,9 @@ Analyze a transaction for fraud signals.
 | `urgency` | `LOW` / `MEDIUM` / `HIGH` / `CRITICAL` | Alert severity |
 | `action` | `ALLOW` / `FLAG` / `BLOCK` | Recommended action |
 | `indicators` | string[] | Specific risk factors detected |
+| `explainability` | object | Behavioral signals, confidence, action guidance, and future monitoring rule |
+
+Send `"language": "fr"` to receive AI and explainability text in French. English is the default.
 
 **Error responses:**
 
@@ -440,11 +460,68 @@ Retrieve all dashboard data: KPIs, chart data, recent transactions, and recent a
     ]
   },
   "recent_transactions": [...],
-  "recent_alerts": [...]
+  "recent_alerts": [...],
+  "portfolio_intelligence": {
+    "total_volume": 18100000,
+    "average_transaction_amount": 123129,
+    "monitoring_alerts": [
+      {
+        "level": "high",
+        "title": "Fraud queue requires attention",
+        "detail": "3 active alert(s), including 1 block recommendation(s)."
+      }
+    ],
+    "segments": [
+      {
+        "key": "stable_low_risk",
+        "label": "Stable low-risk borrowers",
+        "count": 8,
+        "recommendation": "Offer normal loan limits with routine monitoring."
+      }
+    ],
+    "recommendations": ["Review blocked and high-urgency fraud alerts before new credit approvals."]
+  }
 }
 ```
 
 Note: `transaction_by_type`, `transaction_by_method`, `fraud_by_urgency`, and `risk_distribution` are also returned at the top level (legacy format for backwards compatibility).
+
+Use `?language=fr` to localize `portfolio_intelligence` labels, monitoring alerts, and recommendations. English is the default.
+
+---
+
+### 🧪 Dataset Quality
+
+#### POST `/datasets/quality/{dataset_type}/`
+
+Run a pre-analysis quality check on uploaded datasets before importing or scoring them.
+
+**Dataset types:** `transactions`, `credit`, `fraud`  
+**Input:** Same JSON array, `{ "entries": [...] }`, CSV, JSON, or XLSX upload format used by batch endpoints.
+Add `"language": "fr"` in JSON bodies or multipart form data to localize recommendations and quality messages.
+
+**Response `200 OK`:**
+
+```json
+{
+  "total_rows": 4,
+  "valid_rows": 3,
+  "invalid_rows": 1,
+  "duplicate_rows": 1,
+  "quality_score": 75,
+  "missing_fields": {"location": 1},
+  "outliers": [
+    {"row": 4, "field": "amount", "message": "Amount is at least 5x the dataset average."}
+  ],
+  "row_errors": [
+    {"row": 3, "errors": {"amount": ["Ensure this value is greater than or equal to 0."]}}
+  ],
+  "recommendations": [
+    "Fix invalid rows before production scoring.",
+    "Remove duplicate records to avoid biased portfolio analytics."
+  ]
+}
+```
 
 ---
 

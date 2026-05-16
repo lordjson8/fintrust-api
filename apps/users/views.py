@@ -7,6 +7,7 @@ from apps.credit_scoring.models import RiskProfile
 from apps.credit_scoring.serializers import RiskProfileSerializer
 from apps.transactions.models import Transaction
 from apps.transactions.serializers import TransactionSerializer
+from apps.ai_insights.intelligence import build_customer_timeline, build_transaction_insights
 
 
 class UserRiskProfileView(APIView):
@@ -24,6 +25,8 @@ class UserRiskProfileView(APIView):
 
         risk_profile = RiskProfile.objects.filter(user=user).order_by('-created_at').first()
         transactions = Transaction.objects.filter(user=user).order_by('-timestamp')[:20]
+        transaction_history = Transaction.objects.filter(user=user).order_by('-timestamp')[:100]
+        language = request.query_params.get('language') or request.headers.get('Accept-Language', 'en')
 
         return Response({
             'user': {
@@ -34,4 +37,6 @@ class UserRiskProfileView(APIView):
             },
             'risk_profile': RiskProfileSerializer(risk_profile).data if risk_profile else None,
             'recent_transactions': TransactionSerializer(transactions, many=True).data,
+            'transaction_insights': build_transaction_insights(transaction_history, language),
+            'timeline': build_customer_timeline(user, language=language),
         })

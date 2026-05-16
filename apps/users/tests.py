@@ -120,6 +120,8 @@ class TenantIsolationTests(TestCase):
         self.assertEqual(data['kpis']['total_transactions'], 1)
         self.assertEqual(data['kpis']['total_customers'], 1)
         self.assertEqual(data['kpis']['active_fraud_alerts'], 0)
+        self.assertIn('portfolio_intelligence', data)
+        self.assertIn('segments', data['portfolio_intelligence'])
         self.assertEqual(len(data['recent_transactions']), 1)
         self.assertEqual(len(data['recent_alerts']), 1)
         self.assertEqual(data['recent_transactions'][0]['user__full_name'], self.analyst.full_name)
@@ -149,6 +151,18 @@ class TenantIsolationTests(TestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_analyst_user_profile_includes_timeline_and_transaction_insights(self):
+        self.authenticate(self.analyst)
+
+        response = self.client.get(f'/api/v1/users/{self.analyst.id}/risk-profile/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertIn('transaction_insights', data)
+        self.assertEqual(data['transaction_insights']['transaction_count'], 1)
+        self.assertIn('timeline', data)
+        self.assertTrue(any(event['type'] == 'transaction' for event in data['timeline']))
 
     def test_credit_batch_scores_valid_rows_and_reports_invalid_rows(self):
         self.authenticate(self.analyst)
@@ -181,6 +195,7 @@ class TenantIsolationTests(TestCase):
         self.assertEqual(data['failed'], 1)
         self.assertEqual(data['results'][0]['status'], 'success')
         self.assertEqual(data['results'][0]['result']['user_id'], str(self.analyst.id))
+        self.assertIn('explainability', data['results'][0]['result'])
         self.assertEqual(data['results'][1]['status'], 'failed')
 
     def test_fraud_batch_preserves_transaction_access_rules(self):
@@ -212,6 +227,7 @@ class TenantIsolationTests(TestCase):
         self.assertEqual(data['succeeded'], 1)
         self.assertEqual(data['failed'], 1)
         self.assertEqual(data['results'][0]['status'], 'success')
+        self.assertIn('explainability', data['results'][0]['result'])
         self.assertEqual(data['results'][1]['status'], 'failed')
 
     def test_transaction_batch_import_preserves_historical_timestamp(self):
@@ -248,3 +264,47 @@ class TenantIsolationTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('amount,type,payment_method', response.content.decode())
+
+    def test_dataset_quality_reports_invalid_duplicate_and_outlier_rows(self):
+        self.authenticate(self.analyst)
+
+        response = self.client.post(
+            '/api/v1/datasets/quality/transactions/',
+            {
+                'entries': [
+                    {
+                        'amount': '1000.00',
+                        'type': 'debit',
+                        'payment_method': 'mobile_money',
+                        'location': 'Yaounde',
+                    },
+                    {
+                        'amount': '1000.00',
+                        'type': 'debit',
+                        'payment_method': 'mobile_money',
+                        'location': 'Yaounde',
+                    },
+                    {
+                        'amount': '-5.00',
+                        'type': 'debit',
+                        'payment_method': 'mobile_money',
+                        'location': '',
+                    },
+                    {
+                        'amount': '500000.00',
+                        'type': 'transfer',
+                        'payment_method': 'mobile_money',
+                        'location': 'Douala',
+                    },
+                ],
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data['total_rows'], 4)
+        self.assertGreater(data['duplicate_rows'], 0)
+        self.assertGreater(data['invalid_rows'], 0)
+        self.assertIn('quality_score', data)
+        self.assertIn('recommendations', data)
