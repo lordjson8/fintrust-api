@@ -4,7 +4,6 @@
 
 [![Django](https://img.shields.io/badge/Django-5.0-092E20?logo=django)](https://djangoproject.com)
 [![DRF](https://img.shields.io/badge/DRF-3.15-red)](https://www.django-rest-framework.org)
-[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org)
 [![Groq](https://img.shields.io/badge/Groq-Llama_3.3_70B-orange)](https://groq.com)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Railway-336791?logo=postgresql)](https://railway.app)
 
@@ -48,7 +47,7 @@ An analyst logs in, submits a customer's financial profile, and receives in seco
 | Layer | Technology |
 |-------|-----------|
 | Backend | Django 5.0.4, DRF 3.15.1, SimpleJWT 5.3.1 |
-| Frontend | Next.js 14, TypeScript, Tailwind CSS, shadcn/ui |
+| Frontend | React.js ,Tanstack Router, TypeScript, Tailwind CSS, shadcn/ui |
 | AI | Groq API — `llama-3.3-70b-versatile` |
 | Database | PostgreSQL (Railway) |
 | Auth | JWT (Bearer tokens, 8h access / 7d refresh) |
@@ -143,34 +142,7 @@ python manage.py runserver
 Backend runs at `http://localhost:8000`
 Swagger UI at `http://localhost:8000/` (DEBUG mode only)
 
-### Frontend
 
-```bash
-cd fintrust-ai/frontend
-
-# 1. Install dependencies
-npm install
-
-# 2. Configure environment
-cp .env.local.example .env.local
-# → Set NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
-
-# 3. Start development server
-npm run dev
-```
-
-Frontend runs at `http://localhost:3000`
-
-### Demo Credentials
-
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | `admin@fintrust.ai` | `admin1234` |
-| Analyst | `jp.mvondo@demo.com` | `demo1234` |
-| Analyst | `aminata.diallo@demo.com` | `demo1234` |
-| Analyst | `emmanuel.talla@demo.com` | `demo1234` |
-
----
 
 ## API Overview
 
