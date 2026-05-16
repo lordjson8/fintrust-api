@@ -50,7 +50,11 @@ class FraudAnalyzeView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(analyze_fraud_entry(request.user, serializer.validated_data))
+        data = {
+            **serializer.validated_data,
+            'language': request.data.get('language', 'en'),
+        }
+        return Response(analyze_fraud_entry(request.user, data))
 
 
 class FraudBatchAnalyzeView(APIView):
@@ -58,6 +62,7 @@ class FraudBatchAnalyzeView(APIView):
         entries = load_dataset_entries(request)
         results = []
         success_count = 0
+        language = request.data.get('language', 'en')
 
         for index, entry in enumerate(entries, start=1):
             serializer = FraudAnalyzeInputSerializer(data=entry)
@@ -70,7 +75,10 @@ class FraudBatchAnalyzeView(APIView):
                 continue
 
             try:
-                result = analyze_fraud_entry(request.user, serializer.validated_data)
+                result = analyze_fraud_entry(request.user, {
+                    **serializer.validated_data,
+                    'language': language,
+                })
             except (NotFound, PermissionDenied) as exc:
                 results.append({
                     'row': index,

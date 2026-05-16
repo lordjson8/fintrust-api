@@ -49,7 +49,11 @@ class CreditScoreAnalyzeView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(analyze_credit_entry(request.user, serializer.validated_data))
+        data = {
+            **serializer.validated_data,
+            'language': request.data.get('language', 'en'),
+        }
+        return Response(analyze_credit_entry(request.user, data))
 
 
 class CreditScoreBatchAnalyzeView(APIView):
@@ -57,6 +61,7 @@ class CreditScoreBatchAnalyzeView(APIView):
         entries = load_dataset_entries(request)
         results = []
         success_count = 0
+        language = request.data.get('language', 'en')
 
         for index, entry in enumerate(entries, start=1):
             serializer = CreditScoreInputSerializer(data=entry)
@@ -69,7 +74,10 @@ class CreditScoreBatchAnalyzeView(APIView):
                 continue
 
             try:
-                result = analyze_credit_entry(request.user, serializer.validated_data)
+                result = analyze_credit_entry(request.user, {
+                    **serializer.validated_data,
+                    'language': language,
+                })
             except (NotFound, PermissionDenied) as exc:
                 results.append({
                     'row': index,
